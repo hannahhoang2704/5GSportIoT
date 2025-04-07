@@ -8,3 +8,7 @@ Micropython firmware v1.22
 
 micropython-umqtt.simple
 micropython-umqtt.robust
+
+## Features and usability
+
+To trigger/untrigger sensor connection and data reading, press button sw_1 in microcontroller board
