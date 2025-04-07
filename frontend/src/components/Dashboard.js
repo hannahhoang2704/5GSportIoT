@@ -2,6 +2,7 @@
 import React from 'react';
 import Card from './Card';
 import HealthMonitoring from './HealthMonitoring';
+import SensorMonitoring from './SensorMonitoring';
 
 function Dashboard({selectedPlayer}) {
   return (
@@ -28,6 +29,7 @@ function Dashboard({selectedPlayer}) {
         </Card>
       </div>
       <HealthMonitoring healthData={selectedPlayer.healthData} />
+      <SensorMonitoring sensorData={selectedPlayer.sensorData} />
     </div>
   );
 }
