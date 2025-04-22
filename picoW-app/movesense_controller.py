@@ -9,6 +9,7 @@ from data_queue import state
 # Movesense series ID
 _MOVESENSE_SERIES = "174630000192"
 # _MOVESENSE_SERIES = "213230000105"
+_MOVESENSE_SERIES_LIST = ["174630000192", "213230000105"]
 
 # Sensor Data Rate
 IMU_RATE = 26   #Sample rate can be 13, 26, 52, 104, 208, 416, 833, 1666
