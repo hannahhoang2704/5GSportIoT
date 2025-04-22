@@ -22,7 +22,7 @@ async def connect_mqtt():
                             server=_MQTT_SERVER, 
                             port=_MQTT_PORT, 
                             user=_MQTT_USERNAME, 
-                            password=_MQTTT_PASSWORD,
+                            password=_MQTT_PASSWORD,
                             keepalive=_MQTT_KEEPALIVE,
                             ssl=True,
                             ssl_params=_MQTT_SSL_PARAMS)
