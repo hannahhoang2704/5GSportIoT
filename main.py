@@ -6,7 +6,7 @@ from data_queue import state
 from movesense_controller import movesense_task, blink_task
 from led import Led
 from gnss_device import GNSSDevice, gnss_task
-from mqtt import connect_mqtt
+from mqtt import connect_mqtt, publish_to_mqtt
 
 SW_0_PIN = 9
 SW_1_PIN = 8
@@ -46,10 +46,10 @@ async def main():
         print(f"PicoW ID is {picoW_id}")
         await connect_wifi(ssid="Hannah", password="abcdehannah")
         mqtt_client = await connect_mqtt()
-        mqtt_client.publish("ecg", "hello world")
         await asyncio.gather(
             movesense_task(picoW_id),
             # gnss_task,
+            publish_to_mqtt(mqtt_client),
             blink_task(),
             running_state_on_led()
         )
