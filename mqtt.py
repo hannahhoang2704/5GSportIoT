@@ -5,7 +5,7 @@ from data_queue import ecg_queue, hr_queue, imu_queue, gnss_queue
 _MQTT_SERVER = b'd3b9f848475f4921a1bd2e178274dc09.s1.eu.hivemq.cloud'
 _MQTT_PORT = 8883
 _MQTT_USERNAME = b'PicoW'
-_MQTTT_PASSWORD = b'PicoW-123'
+_MQTT_PASSWORD = b'PicoW-123'
 _MQTT_KEEPALIVE = 7200
 _MQTT_SSL_PARAMS = {'server_hostname': _MQTT_SERVER}
 _MQTT_CLIENT_ID = b'raspberrypi-picow'
@@ -30,7 +30,8 @@ async def connect_mqtt():
     except Exception as e:
         print(f"Error connecting to MQTT: {e}")
         return None
-    print("MQTT broker connected")
+    else:
+        print("MQTT broker connected")
     return mqtt_client
 
 async def publish_to_mqtt(mqtt_client):
