@@ -1,5 +1,7 @@
 # Innovation Iot Project
 
+## picoW-app
+
 Raspberry Pi Pico W retrieve data from Movesense using GATT service
 
 Micropython firmware v1.22
@@ -12,3 +14,7 @@ micropython-umqtt.robust
 ## Features and usability
 
 To trigger/untrigger sensor connection and data reading, press button sw_1 in microcontroller board
+
+## movesense-device-app
+
+Application on movesense with build firmware
