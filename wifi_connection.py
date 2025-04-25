@@ -16,7 +16,6 @@ async def connect_wifi(ssid=SSID, password=PASSWORD):
             print(f"Can't connect to ssid {ssid}")
             break
         print(f"Connecting wifi...")
-        # time.sleep(1)
         await asyncio.sleep(1)
     if wlan.isconnected():
         print("Connected to Wifi: ", wlan.ifconfig())
