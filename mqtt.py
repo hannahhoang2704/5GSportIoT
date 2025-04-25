@@ -1,23 +1,11 @@
 import uasyncio as asyncio
 from umqtt.robust import MQTTClient
 from data_queue import ecg_queue, hr_queue, imu_queue, gnss_queue
+from password import MQTT_CONFIG
 
 own_mqtt_broker_enabled = True
 
 _MQTT_CLIENT_ID = b'raspberrypi-picow'
-
-if own_mqtt_broker_enabled:
-    _MQTT_SERVER = b"51.21.239.39"
-    _MQTT_PORT = 1883
-    _MQTT_USERNAME = b"iotuser"
-    _MQTT_PASSWORD = b"iotuser2025"
-else:
-    _MQTT_SERVER = b'd3b9f848475f4921a1bd2e178274dc09.s1.eu.hivemq.cloud'   ### HiveMQ Cloud credentials
-    _MQTT_PORT = 8883
-    _MQTT_USERNAME = b'PicoW'
-    _MQTT_PASSWORD = b'PicoW-123'
-    _MQTT_KEEPALIVE = 7200
-    _MQTT_SSL_PARAMS = {'server_hostname': _MQTT_SERVER}
 
 IMU_TOPIC = "sensors/imu"
 ECG_TOPIC = "sensors/ecg"
@@ -29,19 +17,19 @@ async def connect_mqtt():
         print("Connecting MQTT broker...")
         if own_mqtt_broker_enabled:
             mqtt_client = MQTTClient(client_id=_MQTT_CLIENT_ID,
-                                     server=_MQTT_SERVER,
-                                     port=_MQTT_PORT,
-                                     user=_MQTT_USERNAME,
-                                     password=_MQTT_PASSWORD)
+                                     server=MQTT_CONFIG['server'],
+                                     port=MQTT_CONFIG['port'],
+                                     user=MQTT_CONFIG['username'],
+                                     password=MQTT_CONFIG['password'])
         else:
             mqtt_client = MQTTClient(client_id=_MQTT_CLIENT_ID,
-                                    server=_MQTT_SERVER, 
-                                    port=_MQTT_PORT, 
-                                    user=_MQTT_USERNAME, 
-                                    password=_MQTT_PASSWORD,
-                                    keepalive=_MQTT_KEEPALIVE,
+                                    server=MQTT_CONFIG['server'], 
+                                    port=MQTT_CONFIG['port'], 
+                                    user=MQTT_CONFIG['username'], 
+                                    password=MQTT_CONFIG['password'],
+                                    keepalive=True,
                                     ssl=True,
-                                    ssl_params=_MQTT_SSL_PARAMS)
+                                    ssl_params=MQTT_CONFIG['ssl_params'])
         mqtt_client.connect()
     except Exception as e:
         print(f"Error connecting to MQTT: {e}")
