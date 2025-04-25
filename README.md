@@ -4,6 +4,7 @@ Raspberry Pi Pico W retrieve data from Movesense using GATT service
 
 Micropython firmware v1.22
 
-##Packages in Raspberry Pi PicoW
+## Packages required in Raspberry Pi PicoW
+
 micropython-umqtt.simple
 micropython-umqtt.robust
