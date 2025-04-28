@@ -6,15 +6,18 @@ from config import (SW_0_PIN, SW_1_PIN, SW_2_PIN, LED1, LED2, LED3)
 
 from wifi_connection import connect_wifi
 from data_queue import state
-from movesense_controller import movesense_task, blink_task
+from movesense_controller import movesense_task, blink_task, find_movesense, _MOVESENSE_SERIES
 from led import Led
 from mqtt import connect_mqtt, publish_to_mqtt
 from GNSS_sensor import set_up_gnss_sensor, gnss_task
 
 led1 = Led(LED1)
 led2 = Led(LED2)
+led3 = Led(LED3)
 button1 = machine.Pin(SW_1_PIN, machine.Pin.IN, machine.Pin.PULL_UP)
 button2 = machine.Pin(SW_2_PIN, machine.Pin.IN, machine.Pin.PULL_UP)
+button0 = machine.Pin(SW_0_PIN, machine.Pin.IN, machine.Pin.PULL_UP)
+
 button_pressed = False
 last_pressed_btn = 0
 DEBOUNCE_MS = 500
@@ -29,6 +32,8 @@ def button_handler(pin):
         # print(f"Button pressed. Running state {state.running_state}")
         elif pin == button2:
             state.trigger_connecting_network = True
+        elif pin == button0:
+            state.trigger_ble_scan = True
         last_pressed_btn = current_time
 
 async def running_state_on_led():
@@ -41,7 +46,13 @@ async def network_status_led():
     """Control LED2 to indicate network connection status."""
     while True:
         led2.led_on() if state.network_connection_state else led2.led_off()
-        await asyncio.sleep_ms(300)
+        await asyncio.sleep_ms(600)
+
+async def movesense_detect_status_led():
+    """Led3 turn on if movesensor sensor is found"""
+    while True:
+        led3.led_on() if state.movesense_detect else led3.led_off()
+        await asyncio.sleep_ms(600)
 
 def read_picoW_unique_id():
     """Read the unique ID of the Pico W."""
@@ -69,10 +80,11 @@ async def main():
             movesense_task(picoW_id),
             gnss_task(picoW_id),
             publish_to_mqtt(mqtt_client),
-            blink_task(),
+            # blink_task(),
             running_state_on_led(),
             network_status_led(),
-            reconnect_network()
+            reconnect_network(),
+            movesense_detect_status_led(),
         )
     except Exception as e:
         print(f"Error: {e}")
@@ -83,6 +95,7 @@ async def main():
 
 button1.irq(trigger=machine.Pin.IRQ_FALLING, handler=button_handler)
 button2.irq(trigger=machine.Pin.IRQ_FALLING, handler=button_handler)
+button0.irq(trigger=machine.Pin.IRQ_FALLING, handler=button_handler)
 
 
 # Run the event loop manually
