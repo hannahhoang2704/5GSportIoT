@@ -12,28 +12,51 @@ from mqtt import connect_mqtt, publish_to_mqtt
 from GNSS_sensor import set_up_gnss_sensor, gnss_task
 
 led1 = Led(LED1)
-button = machine.Pin(SW_1_PIN, machine.Pin.IN, machine.Pin.PULL_UP)
+led2 = Led(LED2)
+button1 = machine.Pin(SW_1_PIN, machine.Pin.IN, machine.Pin.PULL_UP)
+button2 = machine.Pin(SW_2_PIN, machine.Pin.IN, machine.Pin.PULL_UP)
 button_pressed = False
 last_pressed_btn = 0
 DEBOUNCE_MS = 500
 
 def button_handler(pin):
+    """IRQ callback for button presses."""
     global last_pressed_btn
     current_time = time.ticks_ms()
     if time.ticks_diff(current_time, last_pressed_btn) > DEBOUNCE_MS:
-        state.running_state = not state.running_state
+        if pin == button1:
+            state.running_state = not state.running_state
         # print(f"Button pressed. Running state {state.running_state}")
+        elif pin == button2:
+            state.trigger_connecting_network = True
         last_pressed_btn = current_time
 
 async def running_state_on_led():
+    """Control LED1 based on running state."""
     while True:
         led1.led_on() if state.running_state else led1.led_off()
         await asyncio.sleep_ms(500)
 
+async def network_status_led():
+    """Control LED2 to indicate network connection status."""
+    while True:
+        led2.led_on() if state.network_connection_state else led2.led_off()
+        await asyncio.sleep_ms(300)
+
 def read_picoW_unique_id():
+    """Read the unique ID of the Pico W."""
     id_bytes = machine.unique_id()
     picoW_id = id_bytes.hex()
     return picoW_id
+
+async def reconnect_network():
+    """Check and reconnect to the network if triggered."""
+    while True:
+        if state.trigger_connecting_network:
+            await connect_wifi()
+            mqtt_client = await connect_mqtt()
+            state.trigger_connecting_network = False
+        await asyncio.sleep_ms(100)
 
 async def main():
     try:
@@ -47,7 +70,9 @@ async def main():
             gnss_task(picoW_id),
             publish_to_mqtt(mqtt_client),
             blink_task(),
-            running_state_on_led()
+            running_state_on_led(),
+            network_status_led(),
+            reconnect_network()
         )
     except Exception as e:
         print(f"Error: {e}")
@@ -56,7 +81,9 @@ async def main():
         loop = asyncio.get_event_loop()
         loop.stop()  # Stops event loop gracefully
 
-button.irq(trigger=machine.Pin.IRQ_FALLING, handler=button_handler)
+button1.irq(trigger=machine.Pin.IRQ_FALLING, handler=button_handler)
+button2.irq(trigger=machine.Pin.IRQ_FALLING, handler=button_handler)
+
 
 # Run the event loop manually
 loop = asyncio.get_event_loop()

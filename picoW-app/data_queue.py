@@ -1,5 +1,7 @@
 class MachineState:
     running_state = False
+    network_connection_state = False
+    trigger_connecting_network = False
     def change_state(self):
         MachineState.running_state = not MachineState.running_state
 
