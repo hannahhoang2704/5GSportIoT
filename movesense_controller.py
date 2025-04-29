@@ -24,6 +24,7 @@ led = machine.Pin("LED", machine.Pin.OUT)
 
 SCAN_DURATION_MS = 10000
 dev_found = False
+rescan_requested = False
 
 async def find_movesense(ms_series):
     global dev_found
@@ -34,14 +35,17 @@ async def find_movesense(ms_series):
                 dev_found = True
                 return result.device
     print(f"Movesense series {ms_series} not found")
+    dev_found = False
     return None
 
 async def movesense_task(pico_id, movesense_series=_MOVESENSE_SERIES):
     global dev_found
+    global rescan_requested
     
     device = await find_movesense(movesense_series)
     if not device:
-        return
+        print("Initial scan failed. Press SW2 to rescan.")
+    
     connected = False
     ms = MovesenseDevice(movesense_series, pico_id)
     while True:
@@ -51,6 +55,21 @@ async def movesense_task(pico_id, movesense_series=_MOVESENSE_SERIES):
         else:
             led2.led_off()
         #print ("debug0")
+            
+        # Check if rescan is requested if no device is found
+        #print (rescan_requested, dev_found)
+        if rescan_requested and not dev_found:
+            print("Rescan requested. Looking for Movesense device...")
+            device = await find_movesense(movesense_series)
+            #rescan_requested = False
+            if dev_found:
+                led2.toggle_led()
+                time.sleep_ms(200)
+                print("Movesense device found after rescan!")
+            else:
+                print("Rescan failed. Press SW2 to try again.")
+                      
+        
         if state.running_state and not connected:
             await ms.connect_ble(device)
             #print ("debug1")

@@ -3,6 +3,7 @@ import machine
 import time
 from wifi_connection import connect_wifi
 from data_queue import state
+import movesense_controller as mc
 from movesense_controller import movesense_task, blink_task
 from led import Led
 from gnss_device import GNSSDevice, gnss_task
@@ -17,8 +18,11 @@ LED3 = 20
 # led1 = machine.Pin(LED1, machine.Pin.OUT)
 led1 = Led(LED1)
 button = machine.Pin(SW_1_PIN, machine.Pin.IN, machine.Pin.PULL_UP)
+button2 = machine.Pin(SW_2_PIN, machine.Pin.IN, machine.Pin.PULL_UP)
 button_pressed = False
+#rescan_requested = False
 last_pressed_btn = 0
+last_pressed_btn2 = 0
 DEBOUNCE_MS = 500
 
 def button_handler(pin):
@@ -28,6 +32,15 @@ def button_handler(pin):
         state.running_state = not state.running_state
         # print(f"Button pressed. Running state {state.running_state}")
         last_pressed_btn = current_time
+        
+def button2_handler(pin):
+    global last_pressed_btn2
+    current_time = time.ticks_ms()
+    if time.ticks_diff(current_time, last_pressed_btn2) > DEBOUNCE_MS:
+        mc.rescan_requested = True
+        #dev_found = False
+        print("SW2 pressed. Rescan requested.")
+        last_pressed_btn2 = current_time
 
 async def running_state_on_led():
     while True:
@@ -58,6 +71,7 @@ async def main():
         loop.stop()  # Stops event loop gracefully
 
 button.irq(trigger=machine.Pin.IRQ_FALLING, handler=button_handler)
+button2.irq(trigger=machine.Pin.IRQ_FALLING, handler=button2_handler)
 
 # Run the event loop manually
 loop = asyncio.get_event_loop()
