@@ -9,6 +9,7 @@ UART_MODE = 0x02
 
 GNSS_DEVICE_ADDR = 0x20
 
+
 # Register addresses
 I2C_YEAR_H = 0
 I2C_YEAR_L = 1
@@ -91,17 +92,21 @@ lat_lon = struct_lat_lon()
 
 
 class DFRobot_GNSS:
-    def __init__(self, bus=0, baudrate=9600, i2c_addr=GNSS_DEVICE_ADDR, uart_port=1):
+    def __init__(self, bus=0, baudrate=9600, i2c_addr=GNSS_DEVICE_ADDR, uart_port=1, i2c=None):
         self._mode = None
         self._i2c_addr = i2c_addr
         self._txbuf = bytearray(1)
 
-        if bus != 0:
+        if i2c is not None:
+            self.i2c = i2c
+            self._mode = I2C_MODE
+        elif bus != 0:
             self.i2c = I2C(bus)
             self._mode = I2C_MODE
         else:
             self.uart = UART(uart_port, baudrate=baudrate, timeout=500)
             self._mode = UART_MODE
+
 
     def begin(self):
         rslt = self.read_reg(I2C_ID, 1)
@@ -241,4 +246,6 @@ class DFRobot_GNSS:
                     recv = self.uart.read(length)
                     return list(recv)
             return -1
+
+
 

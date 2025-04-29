@@ -1,50 +1,44 @@
-import ujson as json  # MicroPython uses 'ujson' instead of 'json'
+import ujson as json
 import time
-from DFRobot_GNSS import DFRobot_GNSS
+from DFRobot_GNSS import *
 
-gnss = DFRobot_GNSS(bus=1)  # <-- for I2C
+# I2C setup (GPIO 4 and 5 on Raspberry Pi Pico WH)
+i2c = machine.I2C(0, scl=machine.Pin(5), sda=machine.Pin(4), freq=115200)
+
+gnss = DFRobot_GNSS(i2c=i2c)
 
 # Start GNSS
 if gnss.begin():
     print("GNSS started successfully!")
+    print("Satellites used:", gnss.get_num_sta_used())
+    print("GNSS mode:", gnss.get_gnss_mode())
+    gnss.set_gnss(GPS_BeiDou_GLONASS)
+    time.sleep(2)  # Sleep to give time to lock in
 else:
     print("Failed to initialize GNSS.")
     while True:
         time.sleep(1)
 
-# Main loop
+# Main
 while True:
     # Read date
     date = gnss.get_date()
+    time_data = gnss.get_utc()
 
-    # Read latitude
+    # Read latitude + longitude in decimal degrees
     lat = gnss.get_lat()
-
-    # Read longitude
     lon = gnss.get_lon()
 
-    # Create a dictionary
     gnss_data = {
-        "date": {
-            "year": date.year,
-            "month": date.month,
-            "day": date.date
-        },
-        "latitude": {
-            "degree": lat.latitude_degree,
-            "direction": lat.lat_direction
-        },
-        "longitude": {
-            "degree": lon.lonitude_degree,
-            "direction": lon.lon_direction
-        }
+        "datetime": f"{date.year}-{date.month}-{date.date} {time_data.hour + 3}:{time_data.minute}:{time_data.second}",
+        "lat": f"{lat.latitude_degree}",
+        "lon": f"{lon.lonitude_degree}",
     }
 
-    # Convert to JSON
     json_data = json.dumps(gnss_data)
 
-    # Print JSON
     print(json_data)
 
-    time.sleep(1)  # Read every 1 second
+    time.sleep(1)
+
 
