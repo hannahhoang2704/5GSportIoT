@@ -40,5 +40,3 @@ while True:
     print(json_data)
 
     time.sleep(1)
-
-
