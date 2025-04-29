@@ -1,61 +1,50 @@
+import ujson as json  # MicroPython uses 'ujson' instead of 'json'
 import time
-import machine
-import ubinascii
-import ustruct
-import json
+from DFRobot_GNSS import DFRobot_GNSS
 
-# I2C setup (GPIO 4 and 5 on Raspberry Pi Pico)
-i2c = machine.I2C(0, scl=machine.Pin(5), sda=machine.Pin(4), freq=115200)
+gnss = DFRobot_GNSS(bus=1)  # <-- for I2C
 
-GNSS_ADDR = 0x20
-
-# Calculate checksum
-def calculate_checksum(sentence):
-    checksum = 0
-    for char in sentence:
-        checksum ^= ord(char)
-    return checksum
-
-# Function to create the command
-def create_command():
-    command = "$PCAS02,1000*"
-    checksum = calculate_checksum(command[1:])  # Skip $
-    full_command = f"{command}{checksum:02X}\r\n"
-    return full_command
-
-# Function to send command to GNSS
-def send_command(command):
-    i2c.writeto(GNSS_ADDR, command.encode('utf-8'))
-
-# Function to parse the data
-def parse_data(data):
-    date = f"{(data[0] << 8 | data[1])}-{data[2]}-{data[3]} {data[4]+2}:{data[5]}:{data[6]}"
-    lat = f"{data[7]}.{(data[8] + (data[9] << 16 | data[10] << 8 | data[11])) / 60} {chr(data[18])}"
-    lon = f"{data[13]}.{(data[14] + (data[15] << 16 | data[16] << 8 | data[17])) / 60} {chr(data[12])}"
-
-    return date, lat, lon
-
-# Main loop
-def main():
-    send_command(create_command())
-
+# Start GNSS
+if gnss.begin():
+    print("GNSS started successfully!")
+else:
+    print("Failed to initialize GNSS.")
     while True:
-        i2c.writeto(GNSS_ADDR, bytearray([0]))  # Send read address
-        data = i2c.readfrom(GNSS_ADDR, 50)  # Read 50 bytes of data
-        
-        date, lat, lon = parse_data(data)
-
-        # Create JSON object
-        json_data = {
-            "date": date,
-            "lat": lat,
-            "lon": lon
-        }
-
-        # Print JSON
-        print(json.dumps(json_data))
-
         time.sleep(1)
 
-if __name__ == "__main__":
-    main()
+# Main loop
+while True:
+    # Read date
+    date = gnss.get_date()
+
+    # Read latitude
+    lat = gnss.get_lat()
+
+    # Read longitude
+    lon = gnss.get_lon()
+
+    # Create a dictionary
+    gnss_data = {
+        "date": {
+            "year": date.year,
+            "month": date.month,
+            "day": date.date
+        },
+        "latitude": {
+            "degree": lat.latitude_degree,
+            "direction": lat.lat_direction
+        },
+        "longitude": {
+            "degree": lon.lonitude_degree,
+            "direction": lon.lon_direction
+        }
+    }
+
+    # Convert to JSON
+    json_data = json.dumps(gnss_data)
+
+    # Print JSON
+    print(json_data)
+
+    time.sleep(1)  # Read every 1 second
+
