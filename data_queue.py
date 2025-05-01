@@ -1,7 +1,17 @@
 class MachineState:
     running_state = False
+    wifi_connected = False
+    rescan_wifi_requested = False
+    movesense_scan_requested = False
+    rescan_requested = False
+    dev_found = False
     def change_state(self):
         MachineState.running_state = not MachineState.running_state
+        MachineState.wifi_connected = not MachineState.wifi_connected
+        MachineState.rescan_wifi_requested = not MachineState.rescan_wifi_requested
+        MachineState.movesense_scan_requested = not MachineState.movesense_scan_requested
+        MachineState.dev_found = not MachineState.dev_found
+        MachineState.rescan_requested = not MachineState.rescan_requested
 
 class Queue:
     """Queue to handle data"""
