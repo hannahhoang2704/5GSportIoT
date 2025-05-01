@@ -92,10 +92,11 @@ lat_lon = struct_lat_lon()
 
 
 class DFRobot_GNSS:
-    def __init__(self, bus=0, baudrate=9600, i2c_addr=GNSS_DEVICE_ADDR, uart_port=1, i2c=None):
+    def __init__(self, gnss_id=1, bus=0, baudrate=9600, i2c_addr=GNSS_DEVICE_ADDR, uart_port=1, i2c=None):
         self._mode = None
         self._i2c_addr = i2c_addr
         self._txbuf = bytearray(1)
+        self.gnss_id = gnss_id
 
         if i2c is not None:
             self.i2c = i2c
@@ -116,6 +117,9 @@ class DFRobot_GNSS:
         if rslt[0] != GNSS_DEVICE_ADDR:
             return False
         return True
+
+    def get_gnss_id(self):
+        return self.gnss_id
 
     def get_date(self):
         rslt = self.read_reg(I2C_YEAR_H, 4)
