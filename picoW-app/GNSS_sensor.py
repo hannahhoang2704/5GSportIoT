@@ -1,12 +1,14 @@
 import time
-from DFRobot_GNSS import DFRobot_GNSS, GPS_BeiDou_GLONASS
 import machine
 import uasyncio as asyncio
+
+from config import SDA_PIN, SCL_PIN, I2C_BAUD_RATE
+from DFRobot_GNSS import DFRobot_GNSS, GPS_BeiDou_GLONASS
 from data_queue import gnss_queue, state
 
 
 # I2C setup (GPIO 4 and 5 on Raspberry Pi Pico WH)
-i2c = machine.I2C(0, scl=machine.Pin(5), sda=machine.Pin(4), freq=115200)
+i2c = machine.I2C(0, scl=machine.Pin(SCL_PIN), sda=machine.Pin(SDA_PIN), freq=I2C_BAUD_RATE)
 
 gnss = DFRobot_GNSS(i2c=i2c)
 

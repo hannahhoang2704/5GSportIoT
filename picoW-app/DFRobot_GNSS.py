@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# MicroPython adaptation of DFRobot_GNSS.py
+# MicroPython adaptation of DFRobot_GNSS.py from https://github.com/DFRobot/DFRobot_GNSS/blob/master/python/raspberrypi/DFRobot_GNSS.py
 
 import time
 from machine import I2C, UART
