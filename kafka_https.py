@@ -1,14 +1,18 @@
-import requests
 import json
-from datetime import datetime
 import time
+import requests
+
+from datetime import datetime
+
 
 def pretty(text):
-  print(json.dumps(text, indent=2))
-  
-base_uri = "https://d08cjqhqploprptk1oa0.registry.eu-central-1.mpx.prd.cloud.redpanda.com"
+    print(json.dumps(text, indent=2))
 
-start_time= time.time()
+
+base_uri = "https://d08cjqhqploprptk1oa0.registry.eu-central-1.mpx.prd.cloud.redpanda.com"
+headers = {
+    'Content-Type': 'application/vnd.schemaregistry.v1+json'
+}
 
 schema = {
     "type": "record",
@@ -17,42 +21,38 @@ schema = {
         {
             "name": "send_time",
             "type": "long",
-            "logicalType": "timestamp-millis",
-            "time": f"{start_time}"
-            
+            "time": f"{datetime.now()}"
         }
     ]
 }
 
-headers = {
-    'Content-Type': 'application/vnd.schemaregistry.v1+json'
-}
-
-current_timestamp = int(datetime.now().timestamp() * 1000)  # Convert to milliseconds
 payload = {
     'schema': json.dumps(schema),
 
 }
 
-start_time = datetime.now()
-# print(f"start_time: {start_time}")
-# Important: You probably need authentication headers or auth!
-response = requests.post(
-    # f"{base_uri}/subjects/movesense/versions",
-    f"{base_uri}/subjects/sensors/versions",
-    headers=headers,
-    auth=('iot5Gsport', 'iot5Gsport'),  # This if authentication required!
-    data=json.dumps(payload)
-)
+def send_data(id:int):
 
-# end_time = datetime.now()
-# print(f"end_time: {end_time}")
-print(f"Response: {response.status_code}; value {response.text}")
-# print(f"Duration = {(end_time-start_time).total_seconds()}")
-res = requests.get(f'{base_uri}/schemas/ids/10',
-                    # f'{base_uri}/subjects', 
-                   headers=headers,
-            auth=('iot5Gsport', 'iot5Gsport'),  # This if authentication required!
-            data=json.dumps(payload)).json()
+    before_send = datetime.now()
+    response = requests.post(
+        # f"{base_uri}/subjects/movesense/versions",
+        f"{base_uri}/subjects/sensors/versions",
+        headers=headers,
+        auth=('iot5Gsport', 'iot5Gsport'),  # This if authentication required!
+        data=json.dumps(payload)
+    )
+    after_send = datetime.now()
+    print(f"Response: {response.status_code}; value {response.text}; Duration (before send post - after post successfully) {(after_send-before_send).total_seconds()}")
+    res = requests.get(f'{base_uri}/schemas/ids/{id}',
+                       # f'{base_uri}/subjects',
+                       headers=headers,
+                       auth=('iot5Gsport', 'iot5Gsport'),  # This if authentication required!
+                       data=json.dumps(payload)).json()
 
-pretty(res)
+    after_get =datetime.now()
+    print(f"Duration(before send post - after get successfully): = {(after_get-before_send).total_seconds()}, Duration(after post successfully - after get successfully) {(after_get-after_send).total_seconds()}")
+    #pretty(res)
+
+
+for i in range(5):
+    send_data(19)
