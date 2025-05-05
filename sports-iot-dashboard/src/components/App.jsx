@@ -1,4 +1,3 @@
-// App.jsx
 import React, {useState, useEffect} from 'react';
 import {MapContainer, TileLayer, Marker} from 'react-leaflet';
 import Toggle from './Toggle';
@@ -27,28 +26,60 @@ export default function App() {
 
   useEffect(() => {
     const src = new EventSource('http://localhost:3001/events');
+
     src.onmessage = (e) => {
-      const {topic, payload} = JSON.parse(e.data);
+      // 1️⃣ Destructure msg instead of payload
+      const {topic, msg} = JSON.parse(e.data);
+
+      // 2️⃣ Parse raw msg into payload
+      let payload;
+      try {
+        payload = JSON.parse(msg);
+      } catch {
+        console.warn('Non-JSON payload for', topic, msg);
+        return;
+      }
+
+      // 3️⃣ Handle each topic
       switch (topic) {
-        case GNSS_TOPIC:
-          setGnss({lat: +payload.Latitude, lon: +payload.Longitude});
+        case GNSS_TOPIC: {
+          const lat = Number(payload.Latitude);
+          const lon = Number(payload.Longitude);
+          if (Number.isFinite(lat) && Number.isFinite(lon)) {
+            setGnss({lat, lon});
+          }
           break;
+        }
         case HR_TOPIC:
           setHr(Math.round(payload.average));
           break;
-        case ECG_TOPIC:
-          setEcgData((prev) => [...prev.slice(-100), ...payload.Samples]);
+        case ECG_TOPIC: {
+          const samples = Array.isArray(payload.Samples) ? payload.Samples : [];
+          setEcgData((prev) => [...prev.slice(-100), ...samples]);
           break;
-        case IMU_TOPIC:
+        }
+        case IMU_TOPIC: {
+          const accArr = Array.isArray(payload.ArrayAcc)
+            ? payload.ArrayAcc
+            : [];
+          const gyroArr = Array.isArray(payload.ArrayGyro)
+            ? payload.ArrayGyro
+            : [];
+          const magArr = Array.isArray(payload.ArrayMagn)
+            ? payload.ArrayMagn
+            : [];
           setImuData((prev) => ({
-            acc: [...prev.acc.slice(-200), ...payload.ArrayAcc],
-            gyro: [...prev.gyro.slice(-200), ...payload.ArrayGyro],
-            mag: [...prev.mag.slice(-200), ...payload.ArrayMagn],
+            acc: [...prev.acc.slice(-200), ...accArr],
+            gyro: [...prev.gyro.slice(-200), ...gyroArr],
+            mag: [...prev.mag.slice(-200), ...magArr],
           }));
           break;
+        }
         default:
+        // ignore unknown topics
       }
     };
+
     return () => src.close();
   }, []);
 
@@ -166,6 +197,7 @@ export default function App() {
 
             {/* ECG */}
             <div className="col-span-12 card card-ecg">
+              `
               <div className="card-header">
                 <h3>ECG</h3>
                 <Toggle checked={toggles.ecg} onChange={() => toggle('ecg')} />
