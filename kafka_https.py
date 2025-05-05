@@ -42,7 +42,7 @@ def send_data(id:int):
         data=json.dumps(payload)
     )
     after_send = datetime.now()
-    print(f"Response: {response.status_code}; value {response.text}; Duration (before send post - after post successfully) {(after_send-before_send).total_seconds()}")
+    print(f"Duration (before send post - after post successfully) {(after_send-before_send).total_seconds()}")
     res = requests.get(f'{base_uri}/schemas/ids/{id}',
                        # f'{base_uri}/subjects',
                        headers=headers,
@@ -50,9 +50,11 @@ def send_data(id:int):
                        data=json.dumps(payload)).json()
 
     after_get =datetime.now()
-    print(f"Duration(before send post - after get successfully): = {(after_get-before_send).total_seconds()}, Duration(after post successfully - after get successfully) {(after_get-after_send).total_seconds()}")
+    print(f"Duration(before send post - after get successfully): = {(after_get-before_send).total_seconds()}")
+    print(f"Duration(after post successfully - after get successfully) {(after_get-after_send).total_seconds()}")
+    print("------------------------------------------------------------------------------------------------------")
     #pretty(res)
 
 
 for i in range(5):
-    send_data(19)
+    send_data(24)

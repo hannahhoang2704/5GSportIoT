@@ -16,7 +16,7 @@ def on_message(client, userdata, msg):
     try:
         # Decode payload
         payload = msg.payload.decode()
-        print(f"Received payload: {payload}")
+        #print(f"Received payload: {payload}")
 
         # Parse the sent time (assuming it is in ISO format)
         sent_time = datetime.fromisoformat(payload)
@@ -27,8 +27,9 @@ def on_message(client, userdata, msg):
         # Calculate duration
         duration = (received_time - sent_time).total_seconds()
 
-        print(f"Sent at: {sent_time}, Received at: {received_time}")
-        print(f"Duration (seconds): {duration:.6f}")
+        #print(f"Sent at: {sent_time}, Received at: {received_time}")
+        print(f"Duration (before send - after received): {duration:.6f}")
+        print("------------------------------------------------------------------------------------------------------")
 
     except Exception as e:
         print(f"Error handling message: {e}")
