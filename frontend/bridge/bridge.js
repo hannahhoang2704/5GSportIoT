@@ -6,10 +6,11 @@ const mqtt = require('mqtt');
 const cors = require('cors');
 
 const MQTT_CONFIG = {
-  host: '51.21.239.39',
-  port: 1883,
-  username: 'iotuser',
-  password: 'iotuser2025',
+  host: '05407e9daee343cf9fe6245e755cb1be.s1.eu.hivemq.cloud',
+  port: '8883', //1883,
+  protocol: 'mqtts',
+  username: 'Movesense', //'iotuser',
+  password: 'Movesense12', //'iotuser2025',
 };
 
 const app = express();
@@ -36,21 +37,41 @@ app.get('/events', (req, res) => {
   });
 });
 
-const mqttClient = mqtt.connect({
-  host: MQTT_CONFIG.host,
-  port: MQTT_CONFIG.port,
-  username: MQTT_CONFIG.username,
-  password: MQTT_CONFIG.password,
-});
+const mqttClient = mqtt.connect(MQTT_CONFIG);
 
 mqttClient.on('connect', () => {
   console.log('✅ MQTT connected');
-  mqttClient.subscribe('sensors/gnss', {qos: 0}, (err) => {
+  /* mqttClient.subscribe('sensors/gnss', {qos: 0}, (err) => {
     if (err) console.error('❌ MQTT subscribe failed', err);
     else console.log('📡 Subscribed to sensors/gnss');
+  }); */
+});
+
+mqttClient.on('error', (err) => {
+  console.error('❌ MQTT connection error', err);
+});
+
+mqttClient.on('message', (topic, payload) => {
+  const msg = payload.toString();
+  console.log('data received:', topic, msg);
+  /* const data = JSON.stringify({topic, msg}); */
+
+  // broadcast to every SSE client
+  clients.forEach((res) => {
+    res.topic = topic;
+    res.payload = msg;
+    //res.write(`data: ${msg}\n\n`);
+    res.write(`data: ${JSON.stringify({topic, msg})}\n\n`);
+    //res.write(`data: ${msg}\n\n`);
   });
 });
-mqttClient.on('connect', () => {
+
+mqttClient.subscribe('sensors/gnss');
+mqttClient.subscribe('sensors/hr');
+mqttClient.subscribe('sensors/ecg');
+mqttClient.subscribe('sensors/imu');
+
+/*mqttClient.on('connect', () => {
   console.log('✅ MQTT connected');
   mqttClient.subscribe('sensors/hr', {qos: 0}, (err) => {
     if (err) console.error('❌ MQTT subscribe failed', err);
@@ -70,16 +91,17 @@ mqttClient.on('connect', () => {
     if (err) console.error('❌ MQTT subscribe failed', err);
     else console.log('📡 Subscribed to sensors/imu');
   });
-});
-mqttClient.on('message', (topic, payload) => {
+}); */
+/* mqttClient.on('message', (topic, payload) => {
   const msg = payload.toString();
+  console.log('data received:', topic, msg);
   const data = JSON.stringify({topic, msg});
 
   // broadcast to every SSE client
   clients.forEach((res) => {
     res.write(`data: ${data}\n\n`);
   });
-});
+}); */
 
 const PORT = 3001;
 app.listen(PORT, () => {

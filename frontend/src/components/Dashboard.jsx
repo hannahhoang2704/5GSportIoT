@@ -1,339 +1,390 @@
-// src/components/Dashboard.jsx
 import React, {useState, useEffect} from 'react';
-import LiveSensorChart from './LiveSensorChart';
+import {Line, Bar} from 'react-chartjs-2';
+import {Chart, registerables} from 'chart.js';
+import './Dashboard.css'; // Create this file for custom styles
 
-import {MapContainer, TileLayer, Marker, Popup} from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
+// Register Chart.js components
+Chart.register(...registerables);
 
-export default function Dashboard() {
-  const [visible, setVisible] = useState({
-    gnss: true,
-    map: true,
-    hr: true,
-    accel: true,
-    gyro: true,
-    ecg: true,
+const Dashboard = () => {
+  // State for all dashboard data
+  const [dashboardData, setDashboardData] = useState({
+    heartRate: 0,
+    ecg: [],
+    position: null,
+    imu: {
+      accelerometer: {x: 0, y: 0, z: 0},
+      gyroscope: {x: 0, y: 0, z: 0},
+      magnetometer: {x: 0, y: 0, z: 0},
+    },
+    lastUpdate: null,
+    connectionStatus: 'disconnected',
+    error: null,
   });
 
-  const toggle = (key) => setVisible((prev) => ({...prev, [key]: !prev[key]}));
+  // Helper function to safely access sensor values
+  const getSafeValue = (sensorData, key, defaultValue = 0) => {
+    /* if (!sensorData || !Array.isArray(sensorData)) return defaultValue;
+    if (!Array.isArray(sensorData[0])) return defaultValue;
+    return sensorData[0][axisIndex] ?? defaultValue; */
+    console.log('befor handle' + sensorData);
 
-  const gridStyle = {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
-    gridTemplateRows: 'auto auto auto',
-    gap: '16px',
-    padding: '16px',
-  };
-  const cardBase = {
-    background: '#fff',
-    borderRadius: '8px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-    padding: '16px',
-    position: 'relative',
-  };
-  const headerStyle = {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '8px',
+    if (!sensorData || !Array.isArray(sensorData)) return defaultValue; // Ensure sensorData is an array
+    const lastElement = sensorData[sensorData.length - 1]; // Get the last element of the array
+    console.log('after handle' + lastElement);
+
+    return lastElement?.[key] ?? defaultValue;
   };
 
-  // assign border colors
-  const borders = {
-    gnss: '#1E90FF', // blue
-    map: '#28a745', // green
-    hr: '#dc3545', // red
-    accel: '#fd7e14', // orange
-    gyro: '#6f42c1', // purple
-    ecg: '#e83e8c', // pink
-  };
+  // Process incoming sensor data
+  const processSensorData = (topic, msg) => {
+    try {
+      setDashboardData((prev) => {
+        const newData = {...prev}; // Create a shallow copy of the previous state
+        newData.lastUpdate = new Date(); // Update the timestamp
+        newData.error = null; // Clear any previous errors
+        //console.log(`Processing data from topic: ${topic}`, msg);
+        msg = JSON.parse(msg);
 
-  return (
-    <div style={gridStyle}>
-      {/* GNSS Position */}
-      <div
-        style={{
-          ...cardBase,
-          border: `2px solid ${borders.gnss}`,
-          gridColumn: '1 / 2',
-          gridRow: 1,
-        }}
-      >
-        <div style={headerStyle}>
-          <h3>GNSS Position</h3>
-          <input
-            type="checkbox"
-            checked={visible.gnss}
-            onChange={() => toggle('gnss')}
-          />
-        </div>
-        {visible.gnss ? <GNSSWidget /> : <p>No data</p>}
-      </div>
+        switch (topic) {
+          case 'sensors/hr':
+            // Ensure msg is parsed and contains the expected structure
+            if (typeof msg === 'object' && msg?.average) {
+              newData.heartRate = msg.average; // Use the average value if available
+            } else if (typeof msg === 'number') {
+              newData.heartRate = msg; // Use the number directly if it's a valid HR value
+            } else {
+              console.warn('Invalid HR data received:', msg);
+            }
+            break;
 
-      {/* Map */}
-      <div
-        style={{
-          ...cardBase,
-          border: `2px solid ${borders.map}`,
-          gridColumn: '2 / 3',
-          gridRow: 1,
-        }}
-      >
-        <div style={headerStyle}>
-          <h3>Map</h3>
-          <input
-            type="checkbox"
-            checked={visible.map}
-            onChange={() => toggle('map')}
-          />
-        </div>
-        {visible.map ? <MapWidget /> : <p>No data</p>}
-      </div>
+          case 'sensors/ecg':
+            try {
+              // Parse the msg string into a JSON object
 
-      {/* Heart Rate */}
-      <div
-        style={{
-          ...cardBase,
-          border: `2px solid ${borders.hr}`,
-          gridColumn: '3 / 4',
-          gridRow: 1,
-        }}
-      >
-        <div style={headerStyle}>
-          <h3>Heart Rate</h3>
-          <input
-            type="checkbox"
-            checked={visible.hr}
-            onChange={() => toggle('hr')}
-          />
-        </div>
-        {visible.hr ? (
-          <LiveSensorChart topic="sensors/hr" label="Heart Rate (bpm)" />
-        ) : (
-          <p>No data</p>
-        )}
-      </div>
+              // Check if Samples exists and is an array
+              if (msg?.Samples && Array.isArray(msg.Samples)) {
+                newData.ecg = msg.Samples.slice(0, 200); // Keep the first 200 samples
+              }
+            } catch (error) {
+              console.error('Failed to parse ECG message:', msg, error);
+            }
+            break;
 
-      {/* Accelerometer */}
-      <div
-        style={{
-          ...cardBase,
-          border: `2px solid ${borders.accel}`,
-          gridColumn: '1 / 2',
-          gridRow: 2,
-        }}
-      >
-        <div style={headerStyle}>
-          <h3>Accelerometer</h3>
-          <input
-            type="checkbox"
-            checked={visible.accel}
-            onChange={() => toggle('accel')}
-          />
-        </div>
-        {visible.accel ? (
-          <LiveSensorChart topic="sensors/imu" label="Accelerometer (X-axis)" />
-        ) : (
-          <p>No data</p>
-        )}
-      </div>
+          case 'sensors/gnss':
+            if (msg?.Latitude && msg?.Longitude) {
+              newData.position = {
+                lat: parseFloat(msg.Latitude), // Convert Latitude to a float
+                long: parseFloat(msg.Longitude), // Convert Longitude to a floa
+                timestamp: msg.TimestampUTC || new Date().toISOString(),
+              };
+            }
+            break;
 
-      {/* Gyroscope */}
-      <div
-        style={{
-          ...cardBase,
-          border: `2px solid ${borders.gyro}`,
-          gridColumn: '2 / 3',
-          gridRow: 2,
-        }}
-      >
-        <div style={headerStyle}>
-          <h3>Gyroscope</h3>
-          <input
-            type="checkbox"
-            checked={visible.gyro}
-            onChange={() => toggle('gyro')}
-          />
-        </div>
-        {visible.gyro ? (
-          <LiveSensorChart topic="sensors/imu" label="Gyroscope (X-axis)" />
-        ) : (
-          <p>No data</p>
-        )}
-      </div>
+          case 'sensors/imu':
+            try {
+              // Parse the msg string into a JSON object
 
-      {/* ECG */}
-      <div
-        style={{
-          ...cardBase,
-          border: `2px solid ${borders.ecg}`,
-          gridColumn: '1 / 4',
-          gridRow: 3,
-        }}
-      >
-        <div style={headerStyle}>
-          <h3>ECG</h3>
-          <input
-            type="checkbox"
-            checked={visible.ecg}
-            onChange={() => toggle('ecg')}
-          />
-        </div>
-        {visible.ecg ? <ECGWidget /> : <p>No data</p>}
-      </div>
-    </div>
-  );
-}
+              // Process accelerometer
+              if (msg?.ArrayAcc) {
+                console.log(
+                  'X value:' + msg.ArrayAcc[0].x,
+                  'type:' + typeof msg.ArrayAcc[0].x
+                );
 
-// GNSS latest position
-function GNSSWidget() {
-  const [pos, setPos] = useState(null);
-  useEffect(() => {
-    const src = new EventSource('http://localhost:3001/events');
-    src.onmessage = (e) => {
-      try {
-        const {topic, payload} = JSON.parse(e.data);
-        if (topic === 'sensors/gnss') {
-          setPos({
-            lat: payload.Latitude,
-            lng: payload.Longitude,
-          });
+                newData.imu.accelerometer = {
+                  x: msg.ArrayAcc[0].x,
+                  y: msg.ArrayAcc[0].y,
+                  z: msg.ArrayAcc[0].z,
+                };
+                console.log(
+                  'newData.imu.accelerometer' + newData.imu.accelerometer.x
+                );
+              }
+
+              // Process gyroscope
+              if (msg?.ArrayGyro && Array.isArray(msg.ArrayGyro)) {
+                newData.imu.gyroscope = {
+                  x: msg.ArrayGyro[0].x,
+                  y: msg.ArrayGyro[0].y,
+                  z: msg.ArrayGyro[0].z,
+                };
+              }
+
+              // Process magnetometer
+              if (msg?.ArrayMagn && Array.isArray(msg.ArrayMagn)) {
+                newData.imu.magnetometer = {
+                  x: msg.ArrayMagn[0].x,
+                  y: msg.ArrayMagn[0].y,
+                  z: msg.ArrayMagn[0].z,
+                };
+              }
+            } catch (error) {
+              console.error('Failed to parse IMU message:', msg, error);
+            }
+            break;
+
+          default:
+            console.warn(`Received data from unknown topic: ${topic}`);
         }
-      } catch {}
-    };
-    return () => src.close();
-  }, []);
 
-  return pos ? (
-    <div>
-      <strong>Lat:</strong> {pos.lat.toFixed(6)}
-      <br />
-      <strong>Lng:</strong> {pos.lng.toFixed(6)}
-    </div>
-  ) : (
-    <p>No data</p>
-  );
-}
+        return newData;
+      });
+    } catch (error) {
+      setDashboardData((prev) => ({
+        ...prev,
+        error: `Error processing ${topic}: ${error.message}`,
+      }));
+      console.error('Data processing error:', error);
+    }
+  };
 
-// Map showing GNSS marker
-function MapWidget() {
-  const [pos, setPos] = useState({lat: 0, lng: 0});
+  // Connect to SSE stream
   useEffect(() => {
-    const src = new EventSource('http://localhost:3001/events');
-    src.onmessage = (e) => {
-      try {
-        const {topic, payload} = JSON.parse(e.data);
-        if (topic === 'sensors/gnss') {
-          setPos({lat: payload.Latitude, lng: payload.Longitude});
-        }
-      } catch {}
+    const eventSourceUrl = 'http://localhost:3001/events';
+    const source = new EventSource(eventSourceUrl);
+
+    console.log(`Connecting to SSE at ${eventSourceUrl}`);
+
+    source.onopen = () => {
+      console.log('SSE connection established');
+      setDashboardData((prev) => ({
+        ...prev,
+        connectionStatus: 'connected',
+        error: null,
+      }));
     };
-    return () => src.close();
-  }, []);
 
-  return (
-    <MapContainer
-      center={[pos.lat, pos.lng]}
-      zoom={13}
-      style={{height: '150px', width: '100%'}}
-    >
-      <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-      <Marker position={[pos.lat, pos.lng]}>
-        <Popup>
-          {`Lat: ${pos.lat.toFixed(6)}, Lng: ${pos.lng.toFixed(6)}`}
-        </Popup>
-      </Marker>
-    </MapContainer>
-  );
-}
-
-// Simple ECG sample list (first 50 values)
-function ECGWidget() {
-  const [samples, setSamples] = useState([]);
-  useEffect(() => {
-    const src = new EventSource('http://localhost:3001/events');
-    src.onmessage = (e) => {
-      try {
-        const {topic, payload} = JSON.parse(e.data);
-        if (topic === 'sensors/ecg') {
-          setSamples(payload.Samples || []);
-        }
-      } catch {}
+    source.onerror = (e) => {
+      console.error('SSE connection error:', e);
+      setDashboardData((prev) => ({
+        ...prev,
+        connectionStatus: 'error',
+        error: 'Connection lost. Attempting to reconnect...',
+      }));
     };
-    return () => src.close();
-  }, []);
-
-  return samples.length ? (
-    <ul style={{maxHeight: 100, overflowY: 'auto', fontSize: '0.8em'}}>
-      {samples.slice(0, 50).map((v, i) => (
-        <li key={i}>{v}</li>
-      ))}
-    </ul>
-  ) : (
-    <p>No data</p>
-  );
-}
-export function useLiveSensorData(topicFilter, maxPoints = 100) {
-  const [data, setData] = useState([]);
-
-  useEffect(() => {
-    const source = new EventSource('http://localhost:3001/events');
 
     source.onmessage = (e) => {
-      let parsed;
       try {
-        parsed = JSON.parse(e.data);
+        const {topic, msg} = JSON.parse(e.data);
+        processSensorData(topic, msg);
       } catch (err) {
-        console.warn('Malformed SSE data:', e.data);
-        return;
+        console.error('Error parsing SSE message:', err);
       }
-      const {topic, payload} = parsed;
-      if (topic !== topicFilter) return;
-      if (!payload || typeof payload !== 'object') {
-        console.warn(`No valid payload for topic ${topic}`);
-        return;
-      }
-
-      // Determine the timestamp (fallback to Timestamp_UTC or now)
-      const rawTime =
-        payload.Timestamp_ms ?? payload.Timestamp_UTC ?? Date.now();
-      const time = new Date(rawTime);
-
-      // Determine the data value (customize per topic)
-      let value = NaN;
-      if (topic === 'sensors/hr' && typeof payload.average === 'number') {
-        value = payload.average;
-      } else if (
-        topic === 'sensors/imu' &&
-        Array.isArray(payload.ArrayAcc) &&
-        payload.ArrayAcc.length
-      ) {
-        value = payload.ArrayAcc[0].x ?? NaN;
-      } else if (topic === 'sensors/ecg' && Array.isArray(payload.Samples)) {
-        // simple: take the first sample
-        value = payload.Samples[0] ?? NaN;
-      } else if (topic === 'sensors/gnss' && payload.Latitude != null) {
-        // numeric latitude as a placeholder value
-        value = payload.Latitude;
-      }
-
-      setData((prev) => {
-        const next = [...prev, {time, value}];
-        return next.length > maxPoints
-          ? next.slice(next.length - maxPoints)
-          : next;
-      });
-    };
-
-    source.onerror = (err) => {
-      console.error('SSE error:', err);
-      source.close();
     };
 
     return () => {
       source.close();
+      console.log('SSE connection closed');
     };
-  }, [topicFilter, maxPoints]);
+  }, []);
 
-  return data;
-}
+  // Chart configurations
+  const ecgChartData = {
+    labels: dashboardData.ecg.map((_, i) => i),
+    datasets: [
+      {
+        label: 'ECG Signal (mV)',
+        data: dashboardData.ecg,
+        borderColor: 'rgba(255, 99, 132, 1)',
+        borderWidth: 1,
+        tension: 0.1,
+        pointRadius: 0,
+      },
+    ],
+  };
+
+  const imuChartData = {
+    labels: ['X-axis', 'Y-axis', 'Z-axis'],
+    datasets: [
+      {
+        label: 'Accelerometer (m/s²)',
+        data: [
+          dashboardData.imu.accelerometer.x,
+          dashboardData.imu.accelerometer.y,
+          dashboardData.imu.accelerometer.z,
+        ],
+        backgroundColor: 'rgba(54, 162, 235, 0.7)',
+      },
+      {
+        label: 'Gyroscope (rad/s)',
+        data: [
+          dashboardData.imu.gyroscope.x,
+          dashboardData.imu.gyroscope.y,
+          dashboardData.imu.gyroscope.z,
+        ],
+        backgroundColor: 'rgba(255, 206, 86, 0.7)',
+      },
+      {
+        label: 'Magnetometer (µT)',
+        data: [
+          dashboardData.imu.magnetometer.x,
+          dashboardData.imu.magnetometer.y,
+          dashboardData.imu.magnetometer.z,
+        ],
+        backgroundColor: 'rgba(75, 192, 192, 0.7)',
+      },
+    ],
+  };
+
+  // Format last update time
+  const formatLastUpdate = () => {
+    if (!dashboardData.lastUpdate) return 'Never';
+    return dashboardData.lastUpdate.toLocaleTimeString();
+  };
+
+  return (
+    <div className="dashboard-container">
+      {/* Header */}
+      <header className="dashboard-header">
+        <h1>SPORTS IoT DASHBOARD</h1>
+        <div className="status-indicator">
+          <span
+            className={`connection-status ${dashboardData.connectionStatus}`}
+          >
+            {dashboardData.connectionStatus.toUpperCase()}
+          </span>
+          <span className="last-update">Last update: {formatLastUpdate()}</span>
+        </div>
+      </header>
+
+      {/* Error display */}
+      {dashboardData.error && (
+        <div className="error-alert">{dashboardData.error}</div>
+      )}
+
+      {/* Main dashboard grid */}
+      <div className="dashboard-grid">
+        {/* Heart Rate Widget */}
+        <div className="dashboard-card heart-rate">
+          <h2>Heart Rate</h2>
+          <div className="heart-rate-value">
+            {dashboardData.heartRate} <span className="unit">bpm</span>
+          </div>
+          <div className="heart-rate-progress">
+            <div
+              className="progress-bar"
+              style={{
+                width: `${Math.min(dashboardData.heartRate / 2, 100)}%`,
+                backgroundColor:
+                  dashboardData.heartRate > 100 ? '#ff4757' : '#2ed573',
+              }}
+            ></div>
+          </div>
+        </div>
+
+        {/* Position Widget */}
+        <div className="dashboard-card position">
+          <h2>GPS Position</h2>
+          {dashboardData.position ? (
+            <>
+              <div className="position-coordinates">
+                <div>
+                  <span className="label">Latitude:</span>
+                  <span className="value">
+                    {dashboardData.position.lat.toFixed(6)}
+                  </span>
+                </div>
+                <div>
+                  <span className="label">Longitude:</span>
+                  <span className="value">
+                    {dashboardData.position.long.toFixed(6)}
+                  </span>
+                </div>
+              </div>
+              <div className="map-placeholder">
+                [Map Visualization Would Appear Here]
+                <div className="map-coordinates">
+                  {dashboardData.position.lat.toFixed(4)},{' '}
+                  {dashboardData.position.long.toFixed(4)}
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="no-data">No position data available</div>
+          )}
+        </div>
+
+        {/* Motion Sensors Widget */}
+        <div className="dashboard-card motion-sensors">
+          <h2>Motion Sensors</h2>
+          <div className="chart-container">
+            <Bar
+              data={imuChartData}
+              options={{
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                  y: {
+                    beginAtZero: false,
+                    title: {
+                      display: true,
+                      text: 'Sensor Values',
+                    },
+                  },
+                },
+                plugins: {
+                  legend: {
+                    position: 'top',
+                  },
+                },
+              }}
+            />
+          </div>
+        </div>
+
+        {/* ECG Widget */}
+        <div className="dashboard-card ecg">
+          <h2>ECG Signal</h2>
+          {dashboardData.ecg.length > 0 ? (
+            <div className="chart-container">
+              <Line
+                data={ecgChartData}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  scales: {
+                    y: {
+                      beginAtZero: false,
+                      title: {
+                        display: true,
+                        text: 'Voltage (mV)',
+                      },
+                    },
+                    x: {
+                      title: {
+                        display: true,
+                        text: 'Samples',
+                      },
+                    },
+                  },
+                }}
+              />
+            </div>
+          ) : (
+            <div className="no-data">Waiting for ECG data...</div>
+          )}
+        </div>
+
+        {/* Raw Data Widget (for debugging) */}
+        <div className="dashboard-card raw-data">
+          <h2>Raw Data Preview</h2>
+          <pre>
+            {JSON.stringify(
+              {
+                heartRate: dashboardData.heartRate,
+                ecgSamples: dashboardData.ecg.length,
+                position: dashboardData.position,
+                imu: dashboardData.imu,
+              },
+              null,
+              2
+            )}
+          </pre>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Dashboard;

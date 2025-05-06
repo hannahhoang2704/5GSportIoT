@@ -1,12 +1,14 @@
 import React from 'react';
-import LiveSensorChart from './components/LiveSensorChart';
+
 import MqttListener from './components/MqttListener';
+import Dashboard from './components/Dashboard';
 
 function App() {
   return (
     <div className="app-container">
       {/* Heart Rate chart */}
-      <LiveSensorChart topic="sensors/hr" label="Heart Rate (bpm)" />
+
+      <Dashboard />
       <MqttListener />
     </div>
   );

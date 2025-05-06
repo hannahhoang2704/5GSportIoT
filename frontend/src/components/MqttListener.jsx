@@ -1,4 +1,4 @@
-// src/components/MqttListener.jsx
+// MqttListener.jsx
 import React, {useState, useEffect} from 'react';
 
 export default function MqttListener() {
@@ -13,18 +13,26 @@ export default function MqttListener() {
       source.close();
     };
 
+    /*     source.onmessage = (e) => {
+      try {
+        console.log('📡 SSE message received:', e.data);
+        const {topic, msg} = JSON.parse(e.data);
+        if (!e.data.trim()) return;
+
+        setMsgs((prev) => [...prev, {topic, msg}]);
+      } catch {
+        console.warn('Malformed SSE data:', e.data);
+      }
+    }; */
     source.onmessage = (e) => {
       try {
-        // Bridge now sends { topic, payload }
-        const {topic, payload} = JSON.parse(e.data);
-        setMsgs((prev) => [
-          ...prev,
-          {
-            topic,
-            data: payload,
-            receivedAt: new Date().toLocaleTimeString(),
-          },
-        ]);
+        //console.log('📡 SSE message received:', e.data);
+        let {topic, msg} = JSON.parse(e.data); // Parse topic and msg
+        //if (!topic || !msg) return; // Ensure both topic and msg exist
+        console.log(msg);
+        console.log(topic);
+
+        setMsgs((prev) => [...prev, {topic, msg}]); // Store topic and msg
       } catch (err) {
         console.warn('Malformed SSE data:', e.data);
       }
@@ -42,10 +50,7 @@ export default function MqttListener() {
       <ul>
         {msgs.map((m, i) => (
           <li key={i}>
-            <strong>{m.topic}</strong> @ {m.receivedAt}:
-            <pre style={{fontSize: '0.8em'}}>
-              {JSON.stringify(m.data, null, 2)}
-            </pre>
+            <strong>{m.topic}</strong>: {m.msg}
           </li>
         ))}
       </ul>
