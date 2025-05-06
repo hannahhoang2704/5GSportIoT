@@ -74,13 +74,13 @@ async def main():
         picoW_id = read_picoW_unique_id()
         await set_up_gnss_sensor()
         print(f"PicoW ID is {picoW_id}")
-        # await connect_wifi()
-        # mqtt_client = await connect_mqtt()
+        await connect_wifi()
+        mqtt_client = await connect_mqtt()
         await asyncio.gather(
             movesense_task(picoW_id),
             # movesense_tasks(picoW_id),
             gnss_task(picoW_id),
-            # publish_to_mqtt(mqtt_client),
+            publish_to_mqtt(mqtt_client),
             # blink_task(),
             running_state_on_led(),
             network_status_led(),
